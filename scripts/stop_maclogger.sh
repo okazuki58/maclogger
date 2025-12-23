@@ -16,3 +16,4 @@ screen -S maclogger -X quit 2>/dev/null || true
 
 echo "✓ maclogger stopped"
 
+

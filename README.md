@@ -1,12 +1,29 @@
 # macOS Activity Logger
 
-macOSでアクティブウィンドウを自動的にキャプチャし、OCRでテキストを抽出、LLMで要約して1分ごとにJSONLログを記録し、毎日18:00に日報を自動生成するツールです。
+macOSでアクティブウィンドウを自動的にキャプチャし、OCRでテキストを抽出、LLMで要約して1分ごとにJSONLログを記録するツールです。好きなタイミングで日報を生成できます。
+
+## クイックスタート
+
+```bash
+# セットアップ
+make setup
+export OPENAI_API_KEY=your_key
+
+# 始業時
+make start
+
+# 終業時
+make stop
+
+# 日報作成
+make report
+```
 
 ## 主な用途
 
 - 日報作成の自動化
 - 1日の作業内容を自動的に記録
-- 業務終了時に日報を自動生成
+- 好きなタイミングで日報を生成
 
 ## 機能
 
@@ -15,7 +32,7 @@ macOSでアクティブウィンドウを自動的にキャプチャし、OCRで
 - Vision FrameworkによるOCR処理(日本語・英語対応)
 - 1時間ごとに作業内容をまとめて要約(OpenAI gpt-5-mini)
 - JSONL形式での活動ログ記録
-- 毎日18:00に日報を自動生成(Markdown形式)
+- 任意のタイミングで日報を生成(Markdown形式)
 
 ## 必要な環境
 
@@ -32,32 +49,33 @@ git clone <repository-url> maclogger
 cd maclogger
 ```
 
-### 2. 依存パッケージをインストール
+### 2. セットアップ
+
+**Makefileを使う場合（推奨）:**
+
+```bash
+make setup
+export OPENAI_API_KEY=your_openai_api_key_here
+```
+
+**手動でセットアップする場合:**
 
 ```bash
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+deactivate  # インストール完了後は抜けてOK
 
-# インストール完了後は抜けてOK（起動時に自動でvenvが使われます）
-deactivate
+chmod +x start_maclogger.sh stop_maclogger.sh generate_report.sh
+export OPENAI_API_KEY=your_openai_api_key_here
 ```
 
 必要なパッケージ:
-- `pyobjc-framework-Vision`: macOS Vision Framework
-- `pyobjc-framework-Quartz`: 画像処理
+- `ocrmac`: macOS Vision Frameworkのラッパー
 - `openai`: OpenAI API
 - `python-dotenv`: 環境変数管理
 
-### 3. 環境変数を設定
-
-```bash
-cp .env.example .env
-OPENAI_API_KEY=your_openai_api_key_here
-```
-
-
-### 4. macOS権限を設定
+### 3. macOS権限を設定
 
 このツールは以下の権限が必要です:
 
@@ -73,38 +91,50 @@ OPENAI_API_KEY=your_openai_api_key_here
 
 ## 実行方法
 
-### バックグラウンドで実行（推奨）
+### 基本的な使い方
 
-screenを使ってバックグラウンドで実行します。ターミナルを閉じても動き続けます。
-
-#### 起動
+**Makefileを使う場合（推奨）:**
 
 ```bash
-# 実行権限を付与（初回のみ）
-chmod +x start_maclogger.sh stop_maclogger.sh
+# 始業時: ロギング開始
+make start
 
-# バックグラウンドで起動
-./start_maclogger.sh
-```
+# 終業時: ロギング停止
+make stop
 
-#### 管理コマンド(オプション)
+# 日報作成（当日）
+make report
 
-```bash
+# 特定の日付の日報を作成
+make report DATE=2025-12-22
+
 # 状態確認
-screen -ls | grep maclogger
-
-# 画面に接続（動作確認）
-screen -r maclogger
-# 接続を解除するには: Ctrl+A, D
-
-# 停止
-./stop_maclogger.sh
+make status
 
 # ログ確認
-tail -f logs/activity_*.jsonl
+make logs
+
+# ヘルプ表示
+make help
 ```
 
-**注意**: screenセッションはMacを再起動すると終了します。再起動後は`./start_maclogger.sh`で再度起動してください。
+**シェルスクリプトを直接使う場合:**
+
+```bash
+# 始業時: ロギング開始
+./scripts/start_maclogger.sh
+
+# 終業時: ロギング停止
+./scripts/stop_maclogger.sh
+
+# 日報作成（当日）
+./scripts/generate_report.sh
+
+# 特定の日付の日報を作成
+./scripts/generate_report.sh --date 2025-12-22
+```
+
+### 動作内容
 
 実行すると:
 - 1分ごとにアクティブウィンドウをキャプチャ
@@ -114,15 +144,24 @@ tail -f logs/activity_*.jsonl
   - 例: 13:45に起動した場合、次の要約は14:00に生成
   - 起動からの経過時間ではなく、時計の時刻に基づきます
 - `logs/hourly_summary_YYYY-MM-DD.jsonl`に時間ごとの要約を保存
-- 18:00になったら自動で日報を生成(`reports/YYYY-MM-DD.md`)
 
-### 手動実行
+生成された日報は`reports/YYYY-MM-DD.md`に保存されます。
+
+### 管理コマンド
 
 ```bash
-python maclogger.py
+# 状態確認
+screen -ls | grep maclogger
+
+# 画面に接続（動作確認）
+screen -r maclogger
+# 接続を解除するには: Ctrl+A, D
+
+# 本日のログを確認
+tail -f logs/activity_$(date +%Y-%m-%d).jsonl
 ```
 
-停止するには`Ctrl+C`を押してください。
+**注意**: screenセッションはMacを再起動すると終了します。再起動後は`make start`で再度起動してください。
 
 ## ログフォーマット
 
@@ -179,26 +218,27 @@ python maclogger.py
 環境変数で設定を変更できます:
 
 - `OPENAI_API_KEY`: OpenAI APIキー(必須)
-- `REPORT_TIME`: 日報生成時刻(デフォルト: 18:00)
 
 ## ディレクトリ構造
 
 ```
 maclogger/
-├── maclogger.py                    # メインスクリプト
+├── src/                            # Pythonスクリプト
+│   ├── maclogger.py                # メインスクリプト
+│   └── generate_report.py          # 日報生成スクリプト
+├── scripts/                        # シェルスクリプト
+│   ├── start_maclogger.sh          # 起動スクリプト
+│   ├── stop_maclogger.sh           # 停止スクリプト
+│   └── generate_report.sh          # 日報生成実行スクリプト
+├── Makefile                        # コマンド短縮用
 ├── requirements.txt                # 依存パッケージ
 ├── README.md                       # このファイル
 ├── .env                            # 環境変数(作成してください)
 ├── .gitignore                      # Gitで無視するファイル
-├── com.maclogger.plist             # launchd設定ファイル
-├── install_daemon.sh               # デーモンインストールスクリプト
-├── uninstall_daemon.sh             # デーモンアンインストールスクリプト
 ├── venv/                           # Python仮想環境
 ├── logs/                           # ログディレクトリ(自動作成)
 │   ├── activity_YYYY-MM-DD.jsonl   # 1分ごとの活動ログ
-│   ├── hourly_summary_YYYY-MM-DD.jsonl # 1時間ごとの要約
-│   ├── daemon.log                  # デーモンの標準出力
-│   └── daemon.err                  # デーモンのエラー出力
+│   └── hourly_summary_YYYY-MM-DD.jsonl # 1時間ごとの要約
 └── reports/                        # 日報ディレクトリ(自動作成)
     └── YYYY-MM-DD.md               # 日報
 ```

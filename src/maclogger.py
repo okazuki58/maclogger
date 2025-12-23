@@ -3,7 +3,7 @@
 macOS Activity Logger for Daily Reports
 
 アクティブウィンドウをキャプチャし、OCRでテキストを抽出、
-LLMで要約して1分ごとにJSONLログを記録し、18:00に日報を生成します。
+1分ごとにJSONLログを記録し、1時間ごとにLLMで要約します。
 """
 
 import os
@@ -30,7 +30,6 @@ load_dotenv()
 
 # Configuration
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-REPORT_TIME = os.getenv("REPORT_TIME", "18:00")
 LOGS_DIR = Path("logs")
 REPORTS_DIR = Path("reports")
 SCREENSHOT_PATH = "/tmp/maclogger_screenshot.png"
@@ -308,122 +307,15 @@ def load_todays_logs() -> List[Dict]:
     return logs
 
 
-def generate_daily_report() -> None:
-    """
-    hourly summaryをまとめて日報を生成
-    """
-    if not OPENAI_API_KEY:
-        print("OpenAI API key not set. Skipping report generation.")
-        return
-
-    today = datetime.now().strftime("%Y-%m-%d")
-    hourly_summary_file = LOGS_DIR / f"hourly_summary_{today}.jsonl"
-
-    if not hourly_summary_file.exists():
-        print("No hourly summaries found for today. Skipping report generation.")
-        return
-
-    # hourly summaryを読み込み
-    hourly_summaries = []
-    try:
-        with open(hourly_summary_file, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line:
-                    hourly_summaries.append(json.loads(line))
-    except Exception as e:
-        print(f"Error loading hourly summaries: {e}")
-        return
-
-    if not hourly_summaries:
-        print("No hourly summaries found. Skipping report generation.")
-        return
-
-    print(f"Generating daily report from {len(hourly_summaries)} hourly summaries...")
-
-    # hourly summaryをまとめる
-    summary_text = "\n\n".join(
-        [f"【{s['hour']}】\n{s['summary']}" for s in hourly_summaries]
-    )
-
-    try:
-        client = OpenAI(api_key=OPENAI_API_KEY)
-
-        response = client.chat.completions.create(
-            model="gpt-5-mini",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "あなたは業務日報を作成するアシスタントです。時間ごとの作業要約から、1日の業務日報を作成します。",
-                },
-                {
-                    "role": "user",
-                    "content": f"""以下は1日の時間ごとの作業要約です。これをまとめて業務日報をMarkdown形式で作成してください。
-
-フォーマット:
-# 業務日報 - {datetime.now().strftime('%Y年%m月%d日')}
-
-## 本日の主な作業
-(時系列または プロジェクト別に整理して記載)
-
-## 使用ツール・技術
-(使用したアプリケーションやツールを列挙)
-
-## 所感
-(1日の振り返りと明日の予定)
-
-時間ごとの作業要約:
-{summary_text}
-""",
-                },
-            ],
-        )
-
-        report_content = response.choices[0].message.content
-
-        if report_content:
-            report_file = REPORTS_DIR / f"{today}.md"
-
-            with open(report_file, "w", encoding="utf-8") as f:
-                f.write(report_content)
-
-            print(f"Daily report generated: {report_file}")
-
-    except Exception as e:
-        print(f"Error generating daily report: {e}")
-
-
-def should_generate_report() -> bool:
-    """
-    日報生成タイミングかどうかをチェック
-
-    出力: 日報生成すべきならTrue
-    """
-    now = datetime.now()
-    current_time = now.strftime("%H:%M")
-
-    # Check if it's report time
-    if current_time != REPORT_TIME:
-        return False
-
-    # Check if report already exists for today
-    today = now.strftime("%Y-%m-%d")
-    report_file = REPORTS_DIR / f"{today}.md"
-
-    return not report_file.exists()
-
-
 def main_loop() -> None:
     """
-    メインループ: 1分ごとに実行し、1時間ごとに要約、18:00に日報生成
+    メインループ: 1分ごとに実行し、1時間ごとに要約
     """
     print("macOS Activity Logger started.")
     print(f"Capturing every {CAPTURE_INTERVAL} seconds.")
     print(f"Hourly summary will be generated every hour.")
-    print(f"Daily report will be generated at {REPORT_TIME}.")
     print("Press Ctrl+C to stop.\n")
 
-    last_report_check = ""
     last_hourly_summary = datetime.now().replace(minute=0, second=0, microsecond=0)
 
     try:
@@ -481,17 +373,6 @@ def main_loop() -> None:
                 summarize_hourly_activities()
                 last_hourly_summary = current_hour
 
-            # Check if we should generate daily report
-            current_hour_min = now.strftime("%H:%M")
-            if current_hour_min != last_report_check:
-                last_report_check = current_hour_min
-
-                if should_generate_report():
-                    print("\n" + "=" * 50)
-                    print("Generating daily report...")
-                    print("=" * 50 + "\n")
-                    generate_daily_report()
-
             # Wait for next cycle
             time.sleep(CAPTURE_INTERVAL)
 
@@ -515,3 +396,4 @@ if __name__ == "__main__":
         print()
 
     main_loop()
+
