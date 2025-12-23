@@ -1,0 +1,4 @@
+ocrmac
+openai
+python-dotenv
+
