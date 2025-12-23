@@ -7,7 +7,9 @@ macOSでアクティブウィンドウを自動的にキャプチャし、OCRで
 ```bash
 # セットアップ
 make setup
-export OPENAI_API_KEY=your_key
+
+# APIキーを設定（.envファイルを作成）
+echo "OPENAI_API_KEY=your_key_here" > .env
 
 # 始業時
 make start
@@ -55,7 +57,6 @@ cd maclogger
 
 ```bash
 make setup
-export OPENAI_API_KEY=your_openai_api_key_here
 ```
 
 **手動でセットアップする場合:**
@@ -66,16 +67,36 @@ source venv/bin/activate
 pip install -r requirements.txt
 deactivate  # インストール完了後は抜けてOK
 
-chmod +x start_maclogger.sh stop_maclogger.sh generate_report.sh
+chmod +x scripts/start_maclogger.sh scripts/stop_maclogger.sh scripts/generate_report.sh
+```
+
+### 3. OpenAI APIキーを設定
+
+**方法1: .envファイルを作成（推奨）**
+
+プロジェクトルートに`.env`ファイルを作成して設定します：
+
+```bash
+echo "OPENAI_API_KEY=your_openai_api_key_here" > .env
+```
+
+または、エディタで`.env`ファイルを作成して以下を記述：
+
+```
+OPENAI_API_KEY=your_openai_api_key_here
+```
+
+**方法2: 環境変数として設定（一時的）**
+
+シェルセッションごとに設定する場合：
+
+```bash
 export OPENAI_API_KEY=your_openai_api_key_here
 ```
 
-必要なパッケージ:
-- `ocrmac`: macOS Vision Frameworkのラッパー
-- `openai`: OpenAI API
-- `python-dotenv`: 環境変数管理
+この場合、ターミナルを閉じると設定が消えます。永続化するには`~/.zshrc`や`~/.bashrc`に追記してください。
 
-### 3. macOS権限を設定
+### 4. macOS権限を設定
 
 このツールは以下の権限が必要です:
 
@@ -102,7 +123,7 @@ make start
 # 終業時: ロギング停止
 make stop
 
-# 日報作成（当日）
+# 日報作成（DATE指定なし = 当日の日報）
 make report
 
 # 特定の日付の日報を作成
@@ -127,7 +148,7 @@ make help
 # 終業時: ロギング停止
 ./scripts/stop_maclogger.sh
 
-# 日報作成（当日）
+# 日報作成（引数なし = 当日の日報）
 ./scripts/generate_report.sh
 
 # 特定の日付の日報を作成
@@ -145,7 +166,10 @@ make help
   - 起動からの経過時間ではなく、時計の時刻に基づきます
 - `logs/hourly_summary_YYYY-MM-DD.jsonl`に時間ごとの要約を保存
 
-生成された日報は`reports/YYYY-MM-DD.md`に保存されます。
+**日報作成について:**
+- `make report`（引数なし）→ 当日の日報を自動生成
+- `make report DATE=2025-12-22`（日付指定）→ 指定日の日報を生成
+- 生成された日報は`reports/YYYY-MM-DD.md`に保存されます
 
 ### 管理コマンド
 
