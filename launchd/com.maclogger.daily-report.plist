@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Service identifier -->
+	<key>Label</key>
+	<string>com.maclogger.daily-report</string>
+
+	<!-- Program to execute -->
+	<key>ProgramArguments</key>
+	<array>
+		<string>/Users/ogawakazuki/dev/maclogger/scripts/auto_generate_daily_report.sh</string>
+	</array>
+
+	<!-- Working directory -->
+	<key>WorkingDirectory</key>
+	<string>/Users/ogawakazuki/dev/maclogger</string>
+
+	<!-- Schedule: Run every day at midnight (0:00) -->
+	<key>StartCalendarInterval</key>
+	<dict>
+		<key>Hour</key>
+		<integer>0</integer>
+		<key>Minute</key>
+		<integer>0</integer>
+	</dict>
+
+	<!-- Standard output log -->
+	<key>StandardOutPath</key>
+	<string>/Users/ogawakazuki/dev/maclogger/logs/launchd_stdout.log</string>
+
+	<!-- Standard error log -->
+	<key>StandardErrorPath</key>
+	<string>/Users/ogawakazuki/dev/maclogger/logs/launchd_stderr.log</string>
+
+	<!-- Run even if previous execution failed -->
+	<key>SuccessfulExit</key>
+	<false/>
+
+	<!-- Environment variables -->
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>PATH</key>
+		<string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+	</dict>
+</dict>
+</plist>
