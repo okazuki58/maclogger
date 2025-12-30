@@ -19,7 +19,7 @@ load_dotenv()
 # Configuration
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 LOGS_DIR = Path("logs")
-REPORTS_DIR = Path("reports")
+REPORTS_DIR = Path("reports/daily")
 
 # Create directories
 LOGS_DIR.mkdir(exist_ok=True)
