@@ -20,6 +20,16 @@ DAILY_REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 WEEKLY_REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
+def get_monthly_reports_dir(date: datetime) -> Path:
+    """
+    指定日の月ごとのレポートディレクトリを取得
+
+    入力: date - 対象日時
+    出力: 月ごとのレポートディレクトリパス (例: reports/daily/2026/01/)
+    """
+    return DAILY_REPORTS_DIR / date.strftime("%Y") / date.strftime("%m")
+
+
 def get_week_date_range(target_date: datetime) -> tuple[datetime, datetime]:
     """
     指定日を含む週の月曜日と日曜日を取得
@@ -56,7 +66,8 @@ def get_daily_report_files(monday: datetime, sunday: datetime) -> list[dict]:
 
     while current_date <= sunday:
         date_str = current_date.strftime("%Y-%m-%d")
-        report_file = DAILY_REPORTS_DIR / f"{date_str}.md"
+        monthly_dir = get_monthly_reports_dir(current_date)
+        report_file = monthly_dir / f"{date_str}.md"
 
         if report_file.exists():
             daily_reports.append({"date": date_str, "file_path": report_file})

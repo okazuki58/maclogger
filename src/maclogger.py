@@ -41,6 +41,18 @@ LOGS_DIR.mkdir(exist_ok=True)
 REPORTS_DIR.mkdir(exist_ok=True)
 
 
+def get_monthly_logs_dir(date: datetime) -> Path:
+    """
+    指定日の月ごとのログディレクトリを取得・作成
+
+    入力: date - 対象日時
+    出力: 月ごとのログディレクトリパス (例: logs/2026/01/)
+    """
+    year_month_dir = LOGS_DIR / date.strftime("%Y") / date.strftime("%m")
+    year_month_dir.mkdir(parents=True, exist_ok=True)
+    return year_month_dir
+
+
 def get_active_window_info() -> Dict[str, str]:
     """
     AppleScriptを使用してアクティブなアプリケーションとウィンドウ情報を取得
@@ -182,7 +194,8 @@ def summarize_hourly_activities() -> None:
     now = datetime.now()
     hour_ago = now - timedelta(hours=1)
     today = now.strftime("%Y-%m-%d")
-    log_file = LOGS_DIR / f"activity_{today}.jsonl"
+    monthly_dir = get_monthly_logs_dir(now)
+    log_file = monthly_dir / f"activity_{today}.jsonl"
 
     if not log_file.exists():
         return
@@ -240,7 +253,7 @@ def summarize_hourly_activities() -> None:
         summary = response.text
         if summary:
             # hourly summaryを保存
-            hourly_summary_file = LOGS_DIR / f"hourly_summary_{today}.jsonl"
+            hourly_summary_file = monthly_dir / f"hourly_summary_{today}.jsonl"
             with open(hourly_summary_file, "a", encoding="utf-8") as f:
                 json.dump(
                     {
@@ -266,8 +279,10 @@ def save_log_entry(entry: Dict) -> None:
 
     入力: ログエントリ(dict)
     """
-    today = datetime.now().strftime("%Y-%m-%d")
-    log_file = LOGS_DIR / f"activity_{today}.jsonl"
+    now = datetime.now()
+    today = now.strftime("%Y-%m-%d")
+    monthly_dir = get_monthly_logs_dir(now)
+    log_file = monthly_dir / f"activity_{today}.jsonl"
 
     try:
         with open(log_file, "a", encoding="utf-8") as f:
@@ -283,8 +298,10 @@ def load_todays_logs() -> List[Dict]:
 
     出力: ログエントリのリスト
     """
-    today = datetime.now().strftime("%Y-%m-%d")
-    log_file = LOGS_DIR / f"activity_{today}.jsonl"
+    now = datetime.now()
+    today = now.strftime("%Y-%m-%d")
+    monthly_dir = get_monthly_logs_dir(now)
+    log_file = monthly_dir / f"activity_{today}.jsonl"
 
     if not log_file.exists():
         return []
