@@ -10,13 +10,14 @@ import argparse
 from datetime import datetime, timedelta
 from pathlib import Path
 from dotenv import load_dotenv
-from openai import OpenAI
+from google import genai
+from google.genai import types
 
 # Load environment variables
 load_dotenv()
 
 # Configuration
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 DAILY_REPORTS_DIR = Path("reports/daily")
 WEEKLY_REPORTS_DIR = Path("reports/weekly")
 
@@ -49,12 +50,12 @@ def get_iso_week_string(target_date: datetime) -> str:
     return f"{year}-W{week_num:02d}"
 
 
-def load_daily_reports(monday: datetime, sunday: datetime) -> list[dict]:
+def get_daily_report_files(monday: datetime, sunday: datetime) -> list[dict]:
     """
-    指定期間のdaily reportを読み込む
+    指定期間のdaily reportファイルパスを取得
     
     入力: monday, sunday - 対象週の月曜日と日曜日
-    出力: daily reportのリスト[{"date": "YYYY-MM-DD", "content": "..."}]
+    出力: daily reportのリスト[{"date": "YYYY-MM-DD", "file_path": Path}]
     """
     daily_reports = []
     current_date = monday
@@ -64,16 +65,11 @@ def load_daily_reports(monday: datetime, sunday: datetime) -> list[dict]:
         report_file = DAILY_REPORTS_DIR / f"{date_str}.md"
         
         if report_file.exists():
-            try:
-                with open(report_file, "r", encoding="utf-8") as f:
-                    content = f.read()
-                    daily_reports.append({
-                        "date": date_str,
-                        "content": content
-                    })
-                print(f"  ✓ {date_str}")
-            except Exception as e:
-                print(f"  ✗ {date_str} (Error: {e})")
+            daily_reports.append({
+                "date": date_str,
+                "file_path": report_file
+            })
+            print(f"  ✓ {date_str}")
         else:
             print(f"  - {date_str} (Not found)")
         
@@ -82,15 +78,42 @@ def load_daily_reports(monday: datetime, sunday: datetime) -> list[dict]:
     return daily_reports
 
 
+def read_daily_reports_content(daily_reports: list[dict]) -> str:
+    """
+    日次レポートファイルの内容を読み込んで結合
+    
+    入力:
+        daily_reports - [{"date": "YYYY-MM-DD", "file_path": Path}]
+    出力:
+        結合されたMarkdownテキスト
+    """
+    contents = []
+    
+    print("\nReading daily reports:")
+    for report in daily_reports:
+        date_str = report['date']
+        file_path = report['file_path']
+        
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+                contents.append(f"## {date_str}\n\n{content}")
+                print(f"  ✓ Read {date_str}.md ({len(content)} chars)")
+        except Exception as e:
+            print(f"  ✗ Failed to read {date_str}.md: {e}")
+    
+    return "\n\n---\n\n".join(contents)
+
+
 def generate_weekly_report(target_date: datetime) -> None:
     """
     指定日を含む週の週報を生成
     
     入力: target_date - 基準日(この日を含む週の週報を生成)
     """
-    if not OPENAI_API_KEY:
-        print("OpenAI API key not set. Skipping weekly report generation.")
-        print("Set it with: export OPENAI_API_KEY=your_key")
+    if not GEMINI_API_KEY:
+        print("Gemini API key not set. Skipping weekly report generation.")
+        print("Set it with: export GEMINI_API_KEY=your_key")
         return
 
     monday, sunday = get_week_date_range(target_date)
@@ -98,9 +121,9 @@ def generate_weekly_report(target_date: datetime) -> None:
     
     print(f"Generating weekly report for {week_str}")
     print(f"Period: {monday.strftime('%Y-%m-%d')} to {sunday.strftime('%Y-%m-%d')}")
-    print("Loading daily reports:")
+    print("Finding daily reports:")
     
-    daily_reports = load_daily_reports(monday, sunday)
+    daily_reports = get_daily_report_files(monday, sunday)
     
     if not daily_reports:
         print("No daily reports found for this week. Skipping weekly report generation.")
@@ -108,52 +131,64 @@ def generate_weekly_report(target_date: datetime) -> None:
     
     print(f"\nFound {len(daily_reports)} daily report(s).")
     
-    # daily reportを結合
-    combined_content = "\n\n---\n\n".join([
-        f"## {report['date']}\n\n{report['content']}"
-        for report in daily_reports
-    ])
-    
     try:
-        client = OpenAI(api_key=OPENAI_API_KEY)
+        # クライアントを作成
+        client = genai.Client(api_key=GEMINI_API_KEY)
+        
+        # 日次レポートの内容を読み込み
+        combined_content = read_daily_reports_content(daily_reports)
         
         # 週の表示用文字列
         week_display = f"{monday.strftime('%Y年%m月%d日')}〜{sunday.strftime('%m月%d日')}"
         
-        response = client.chat.completions.create(
-            model="gpt-5-mini",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "あなたは週報を作成するアシスタントです。1週間分の業務日報から、週報を作成します。",
-                },
-                {
-                    "role": "user",
-                    "content": f"""以下は1週間分の業務日報です。これをまとめて週報をMarkdown形式で作成してください。
+        # プロンプトを作成
+        prompt = f"""あなたは週報を作成するアシスタントです。
 
-フォーマット:
+以下に1週間分の日次レポート（Markdownファイル）を提供します。これらを読んで、週報をMarkdown形式で作成してください。
+
+重要：
+- 各日次レポートには詳細な作業内容が記載されています
+- 「作業記録なし」という表現は使用しないでください
+- 各日のサマリは、該当日の日次レポートの内容を必ず反映してください
+- 日次レポートが長い場合は、重要な内容を3〜5項目に要約してください
+
+出力フォーマット:
 # 週報 - {week_display} ({week_str})
 
-## 今週の主な成果
-(重要な成果を3〜5項目でまとめる)
+## 今週の成果
+(重要な成果を3〜5項目で簡潔にまとめる)
 
-## 各日のサマリ
-(日付ごとに簡潔にまとめる)
+## 各日の作業内容
+- YYYY-MM-DD
+  - 主な作業内容を箇条書きで（3〜5項目）
 
-## 使用ツール・技術
-(今週使用したアプリケーションやツールを列挙)
+## 所感
+(1週間の振り返り)
 
-## 所感と来週の予定
-(1週間の振り返りと来週の予定)
+---
 
-1週間分の業務日報:
+1週間分の日次レポート:
+
 {combined_content}
-""",
-                },
-            ],
+"""
+        
+        print(f"\nGenerating weekly report... (prompt length: {len(prompt)} chars)")
+        
+        # リクエスト
+        response = client.models.generate_content(
+            model='gemini-2.0-flash-exp',
+            contents=prompt
         )
         
-        report_content = response.choices[0].message.content
+        # デバッグ: レスポンスを確認
+        print(f"\nAPI Response received:")
+        print(f"  Type: {type(response)}")
+        print(f"  Has text: {hasattr(response, 'text')}")
+        
+        report_content = response.text
+        
+        print(f"  Content length: {len(report_content)} chars")
+        print(f"  First 200 chars: {report_content[:200]}")
         
         if report_content:
             report_file = WEEKLY_REPORTS_DIR / f"{week_str}.md"

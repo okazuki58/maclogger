@@ -33,8 +33,8 @@ stop: ## 終業時: ロギングを停止
 report: ## 日報を作成 (使用例: make report DATE=2025-12-22)
 	@./scripts/generate_report.sh --date $(DATE)
 
-weekly-report: ## 週報を作成(今週月曜日〜日曜日)
-	@./scripts/generate_weekly_report.sh
+weekly-report: ## 週報を作成(今週月曜日〜日曜日、または DATE=YYYY-MM-DD で指定週)
+	@./scripts/generate_weekly_report.sh --date $(DATE)
 
 status: ## 実行状態を確認
 	@echo "maclogger status:"
@@ -63,9 +63,7 @@ install-scheduler: ## 日報自動生成をlaunchdに登録（毎日0時に自�
 	@echo "Check logs at: logs/auto_report.log"
 	@echo ""
 	@echo "To verify: launchctl list | grep maclogger"
-	@echo "To test now: make test-auto-report"
-
-uninstall-scheduler: ## 日報自動生成をlaunchdから削除
+	@echo "To test now: make test-auto-report"uninstall-scheduler: ## 日報自動生成をlaunchdから削除
 	@echo "Uninstalling daily report scheduler..."
 	@launchctl unload ~/Library/LaunchAgents/com.maclogger.daily-report.plist 2>/dev/null || true
 	@rm -f ~/Library/LaunchAgents/com.maclogger.daily-report.plist

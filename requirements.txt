@@ -1,4 +1,4 @@
 ocrmac
-openai
+google-genai
 python-dotenv
 

@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, Dict, List
 from dotenv import load_dotenv
-from openai import OpenAI
+from google import genai
 
 # OCR imports
 try:
@@ -29,7 +29,7 @@ except ImportError:
 load_dotenv()
 
 # Configuration
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 LOGS_DIR = Path("logs")
 REPORTS_DIR = Path("reports")
 SCREENSHOT_PATH = "/tmp/maclogger_screenshot.png"
@@ -175,8 +175,8 @@ def summarize_hourly_activities() -> None:
     """
     過去1時間分のアクティビティログを読み込んで要約し、hourly summaryとして保存
     """
-    if not OPENAI_API_KEY:
-        print("OpenAI API key not set. Skipping hourly summary.")
+    if not GEMINI_API_KEY:
+        print("Gemini API key not set. Skipping hourly summary.")
         return
 
     now = datetime.now()
@@ -222,27 +222,22 @@ def summarize_hourly_activities() -> None:
     )
 
     try:
-        client = OpenAI(api_key=OPENAI_API_KEY)
+        client = genai.Client(api_key=GEMINI_API_KEY)
 
-        response = client.chat.completions.create(
-            model="gpt-5-mini",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "あなたは作業ログから活動内容を要約するアシスタントです。",
-                },
-                {
-                    "role": "user",
-                    "content": f"""以下は過去1時間の作業ログです。
+        prompt = f"""あなたは作業ログから活動内容を要約するアシスタントです。
+
+以下は過去1時間の作業ログです。
 時系列で主な作業内容を3-5行で日本語で要約してください:
 
 {summary_text}
-""",
-                },
-            ],
+"""
+
+        response = client.models.generate_content(
+            model="gemini-3-pro-preview",
+            contents=prompt,
         )
 
-        summary = response.choices[0].message.content
+        summary = response.text
         if summary:
             # hourly summaryを保存
             hourly_summary_file = LOGS_DIR / f"hourly_summary_{today}.jsonl"
@@ -390,9 +385,9 @@ def main_loop() -> None:
 
 
 if __name__ == "__main__":
-    if not OPENAI_API_KEY:
-        print("Warning: OPENAI_API_KEY not set. LLM features will be disabled.")
-        print("Set it with: export OPENAI_API_KEY=your_key")
+    if not GEMINI_API_KEY:
+        print("Warning: GEMINI_API_KEY not set. LLM features will be disabled.")
+        print("Set it with: export GEMINI_API_KEY=your_key")
         print()
 
     main_loop()

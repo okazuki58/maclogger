@@ -11,13 +11,13 @@ import argparse
 from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
-from openai import OpenAI
+from google import genai
 
 # Load environment variables
 load_dotenv()
 
 # Configuration
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 LOGS_DIR = Path("logs")
 REPORTS_DIR = Path("reports/daily")
 
@@ -32,9 +32,9 @@ def generate_daily_report(target_date: str) -> None:
     
     入力: target_date - 日報作成日 (YYYY-MM-DD形式)
     """
-    if not OPENAI_API_KEY:
-        print("OpenAI API key not set. Skipping report generation.")
-        print("Set it with: export OPENAI_API_KEY=your_key")
+    if not GEMINI_API_KEY:
+        print("Gemini API key not set. Skipping report generation.")
+        print("Set it with: export GEMINI_API_KEY=your_key")
         return
 
     hourly_summary_file = LOGS_DIR / f"hourly_summary_{target_date}.jsonl"
@@ -68,7 +68,8 @@ def generate_daily_report(target_date: str) -> None:
     )
 
     try:
-        client = OpenAI(api_key=OPENAI_API_KEY)
+        # クライアントを作成
+        client = genai.Client(api_key=GEMINI_API_KEY)
 
         # Parse target_date for display
         try:
@@ -77,16 +78,9 @@ def generate_daily_report(target_date: str) -> None:
         except ValueError:
             date_display = target_date
 
-        response = client.chat.completions.create(
-            model="gpt-5-mini",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "あなたは業務日報を作成するアシスタントです。時間ごとの作業要約から、1日の業務日報を作成します。",
-                },
-                {
-                    "role": "user",
-                    "content": f"""以下は1日の時間ごとの作業要約です。これをまとめて業務日報をMarkdown形式で作成してください。
+        prompt = f"""あなたは業務日報を作成するアシスタントです。時間ごとの作業要約から、1日の業務日報を作成します。
+
+以下は1日の時間ごとの作業要約です。これをまとめて業務日報をMarkdown形式で作成してください。
 
 フォーマット:
 # 業務日報 - {date_display}
@@ -102,12 +96,14 @@ def generate_daily_report(target_date: str) -> None:
 
 時間ごとの作業要約:
 {summary_text}
-""",
-                },
-            ],
+"""
+
+        response = client.models.generate_content(
+            model='gemini-2.0-flash-exp',
+            contents=prompt
         )
 
-        report_content = response.choices[0].message.content
+        report_content = response.text
 
         if report_content:
             report_file = REPORTS_DIR / f"{target_date}.md"
