@@ -187,6 +187,56 @@ tail -f logs/activity_$(date +%Y-%m-%d).jsonl
 
 **注意**: screenセッションはMacを再起動すると終了します。再起動後は`make start`で再度起動してください。
 
+## 日報の自動生成
+
+毎日0時に前日の日報を自動生成するように設定できます。
+
+### セットアップ
+
+```bash
+# 日報自動生成を有効化（launchdに登録）
+make install-scheduler
+```
+
+これで、**毎日0時0分に自動的に前日の日報が生成**されるようになります。
+
+例:
+- 12月30日 0:00 → 12月29日の日報を生成
+- 12月31日 0:00 → 12月30日の日報を生成
+
+### 確認方法
+
+```bash
+# 登録されているか確認
+launchctl list | grep maclogger
+
+# ログを確認
+cat logs/auto_report.log
+
+# 手動でテスト実行
+make test-auto-report
+```
+
+### 通知
+
+日報生成が完了すると、macOSの通知センターで結果を確認できます:
+- 成功時: "Daily report generated for YYYY-MM-DD"
+- 失敗時: "Failed to generate daily report"
+
+### 無効化する場合
+
+```bash
+# 日報自動生成を無効化
+make uninstall-scheduler
+```
+
+### 注意事項
+
+- **Macの電源が入っている必要があります**（スリープ中でもOK）
+- 0:00時点でスリープ中の場合、起動時に実行されます
+- OpenAI APIキーが設定されている必要があります
+- hourly_summaryが存在しない日は日報が生成されません
+
 ## ログフォーマット
 
 ### アクティビティログ (`logs/activity_YYYY-MM-DD.jsonl`)
@@ -309,6 +359,54 @@ export OPENAI_API_KEY=your_key
 ### アクティブウィンドウ情報が取得できない
 
 システム設定でアクセシビリティ権限を確認してください。
+
+### 日報自動生成が動作しない
+
+#### スケジューラが登録されているか確認
+
+```bash
+launchctl list | grep maclogger
+```
+
+`com.maclogger.daily-report`が表示されれば正常に登録されています。
+
+#### ログを確認
+
+```bash
+# 自動実行のログ
+cat logs/auto_report.log
+
+# launchdの標準出力
+cat logs/launchd_stdout.log
+
+# launchdのエラー出力
+cat logs/launchd_stderr.log
+```
+
+#### 手動でテスト実行
+
+```bash
+make test-auto-report
+```
+
+これで正常に動作すれば、launchdの設定に問題があります。
+
+#### よくある問題
+
+- **OPENAI_API_KEYが設定されていない**: `.env`ファイルを確認
+- **hourly_summaryがない**: 日報生成にはhourly_summaryが必要です
+- **パスが間違っている**: plistファイル内のパスを確認
+- **権限の問題**: `chmod +x scripts/auto_generate_daily_report.sh`を実行
+
+#### スケジューラの再登録
+
+```bash
+# 一度削除
+make uninstall-scheduler
+
+# 再登録
+make install-scheduler
+```
 
 ## ライセンス
 

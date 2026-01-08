@@ -5,21 +5,16 @@ Daily Report Generator for macOS Activity Logger
 hourly summaryをまとめて業務日報を生成します。
 """
 
-import os
 import json
 import argparse
 from datetime import datetime
 from pathlib import Path
-from dotenv import load_dotenv
-from openai import OpenAI
 
-# Load environment variables
-load_dotenv()
+from gemini_client import create_gemini_client, generate_content
 
 # Configuration
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 LOGS_DIR = Path("logs")
-REPORTS_DIR = Path("reports")
+REPORTS_DIR = Path("reports/daily")
 
 # Create directories
 LOGS_DIR.mkdir(exist_ok=True)
@@ -29,12 +24,11 @@ REPORTS_DIR.mkdir(exist_ok=True)
 def generate_daily_report(target_date: str) -> None:
     """
     指定日のhourly summaryをまとめて日報を生成
-    
+
     入力: target_date - 日報作成日 (YYYY-MM-DD形式)
     """
-    if not OPENAI_API_KEY:
-        print("OpenAI API key not set. Skipping report generation.")
-        print("Set it with: export OPENAI_API_KEY=your_key")
+    client = create_gemini_client()
+    if not client:
         return
 
     hourly_summary_file = LOGS_DIR / f"hourly_summary_{target_date}.jsonl"
@@ -67,58 +61,52 @@ def generate_daily_report(target_date: str) -> None:
         [f"【{s['hour']}】\n{s['summary']}" for s in hourly_summaries]
     )
 
+    # Parse target_date for display
     try:
-        client = OpenAI(api_key=OPENAI_API_KEY)
+        date_obj = datetime.strptime(target_date, "%Y-%m-%d")
+        date_display = date_obj.strftime("%Y年%m月%d日")
+    except ValueError:
+        date_display = target_date
 
-        # Parse target_date for display
-        try:
-            date_obj = datetime.strptime(target_date, "%Y-%m-%d")
-            date_display = date_obj.strftime("%Y年%m月%d日")
-        except ValueError:
-            date_display = target_date
+    prompt = f"""あなたは業務日報を作成するアシスタントです。
 
-        response = client.chat.completions.create(
-            model="gpt-5-mini",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "あなたは業務日報を作成するアシスタントです。時間ごとの作業要約から、1日の業務日報を作成します。",
-                },
-                {
-                    "role": "user",
-                    "content": f"""以下は1日の時間ごとの作業要約です。これをまとめて業務日報をMarkdown形式で作成してください。
+以下に1日の時間ごとの作業要約を提供します。これらを読んで、業務日報をMarkdown形式で作成してください。
 
-フォーマット:
+重要：
+- 各時間帯には詳細な作業内容が記載されています
+- 「作業記録なし」という表現は使用しないでください
+- 各時間帯のサマリは、該当時間帯の作業要約の内容を必ず反映してください
+- 作業要約が長い場合は、重要な内容を3〜5項目に要約してください
+
+出力フォーマット:
 # 業務日報 - {date_display}
 
 ## 本日の主な作業
-(時系列または プロジェクト別に整理して記載)
+(重要な作業を3〜5項目で簡潔にまとめる)
 
-## 使用ツール・技術
-(使用したアプリケーションやツールを列挙)
+## 各時間帯の作業内容
+- HH:00-HH:59
+  - 主な作業内容を箇条書きで（3〜5項目）
 
 ## 所感
 (1日の振り返りと明日の予定)
 
+---
+
 時間ごとの作業要約:
+
 {summary_text}
-""",
-                },
-            ],
-        )
+"""
 
-        report_content = response.choices[0].message.content
+    report_content = generate_content(client, prompt)
 
-        if report_content:
-            report_file = REPORTS_DIR / f"{target_date}.md"
+    if report_content:
+        report_file = REPORTS_DIR / f"{target_date}.md"
 
-            with open(report_file, "w", encoding="utf-8") as f:
-                f.write(report_content)
+        with open(report_file, "w", encoding="utf-8") as f:
+            f.write(report_content)
 
-            print(f"Daily report generated: {report_file}")
-
-    except Exception as e:
-        print(f"Error generating daily report: {e}")
+        print(f"Daily report generated: {report_file}")
 
 
 if __name__ == "__main__":
@@ -134,4 +122,3 @@ if __name__ == "__main__":
 
     print(f"Generating report for {args.date}...")
     generate_daily_report(args.date)
-
