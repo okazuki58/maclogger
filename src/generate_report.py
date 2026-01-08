@@ -21,6 +21,30 @@ LOGS_DIR.mkdir(exist_ok=True)
 REPORTS_DIR.mkdir(exist_ok=True)
 
 
+def get_monthly_logs_dir(date_str: str) -> Path:
+    """
+    指定日の月ごとのログディレクトリを取得
+
+    入力: date_str - YYYY-MM-DD形式の日付
+    出力: 月ごとのログディレクトリパス (例: logs/2026/01/)
+    """
+    date = datetime.strptime(date_str, "%Y-%m-%d")
+    return LOGS_DIR / date.strftime("%Y") / date.strftime("%m")
+
+
+def get_monthly_reports_dir(date_str: str) -> Path:
+    """
+    指定日の月ごとのレポートディレクトリを取得・作成
+
+    入力: date_str - YYYY-MM-DD形式の日付
+    出力: 月ごとのレポートディレクトリパス (例: reports/daily/2026/01/)
+    """
+    date = datetime.strptime(date_str, "%Y-%m-%d")
+    year_month_dir = REPORTS_DIR / date.strftime("%Y") / date.strftime("%m")
+    year_month_dir.mkdir(parents=True, exist_ok=True)
+    return year_month_dir
+
+
 def generate_daily_report(target_date: str) -> None:
     """
     指定日のhourly summaryをまとめて日報を生成
@@ -31,7 +55,8 @@ def generate_daily_report(target_date: str) -> None:
     if not client:
         return
 
-    hourly_summary_file = LOGS_DIR / f"hourly_summary_{target_date}.jsonl"
+    monthly_logs_dir = get_monthly_logs_dir(target_date)
+    hourly_summary_file = monthly_logs_dir / f"hourly_summary_{target_date}.jsonl"
 
     if not hourly_summary_file.exists():
         print(f"No hourly summaries found for {target_date}.")
@@ -101,7 +126,8 @@ def generate_daily_report(target_date: str) -> None:
     report_content = generate_content(client, prompt)
 
     if report_content:
-        report_file = REPORTS_DIR / f"{target_date}.md"
+        monthly_reports_dir = get_monthly_reports_dir(target_date)
+        report_file = monthly_reports_dir / f"{target_date}.md"
 
         with open(report_file, "w", encoding="utf-8") as f:
             f.write(report_content)
