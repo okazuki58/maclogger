@@ -1,4 +1,5 @@
 ocrmac
 google-genai
 python-dotenv
+requests
 

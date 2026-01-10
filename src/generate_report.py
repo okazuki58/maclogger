@@ -5,12 +5,13 @@ Daily Report Generator for macOS Activity Logger
 hourly summaryをまとめて業務日報を生成します。
 """
 
+import sys
 import json
 import argparse
 from datetime import datetime
 from pathlib import Path
 
-from gemini_client import create_gemini_client, generate_content
+from gemini_client import create_gemini_client, generate_content, check_network_connection
 
 # Configuration
 LOGS_DIR = Path("logs")
@@ -51,17 +52,23 @@ def generate_daily_report(target_date: str) -> None:
 
     入力: target_date - 日報作成日 (YYYY-MM-DD形式)
     """
+    # ネットワーク接続確認
+    if not check_network_connection():
+        print("Error: No network connection to Gemini API")
+        sys.exit(1)
+
     client = create_gemini_client()
     if not client:
-        return
+        print("Error: Failed to create Gemini client")
+        sys.exit(1)
 
     monthly_logs_dir = get_monthly_logs_dir(target_date)
     hourly_summary_file = monthly_logs_dir / f"hourly_summary_{target_date}.jsonl"
 
     if not hourly_summary_file.exists():
-        print(f"No hourly summaries found for {target_date}.")
+        print(f"Error: No hourly summaries found for {target_date}.")
         print(f"Expected file: {hourly_summary_file}")
-        return
+        sys.exit(1)
 
     # hourly summaryを読み込み
     hourly_summaries = []
@@ -72,12 +79,12 @@ def generate_daily_report(target_date: str) -> None:
                 if line:
                     hourly_summaries.append(json.loads(line))
     except Exception as e:
-        print(f"Error loading hourly summaries: {e}")
-        return
+        print(f"Error: Failed to load hourly summaries: {e}")
+        sys.exit(1)
 
     if not hourly_summaries:
-        print("No hourly summaries found. Skipping report generation.")
-        return
+        print("Error: No hourly summaries found. Cannot generate report.")
+        sys.exit(1)
 
     print(f"Generating daily report from {len(hourly_summaries)} hourly summaries...")
 
@@ -125,7 +132,11 @@ def generate_daily_report(target_date: str) -> None:
 
     report_content = generate_content(client, prompt)
 
-    if report_content:
+    if not report_content:
+        print("Error: Failed to generate daily report content")
+        sys.exit(1)
+
+    try:
         monthly_reports_dir = get_monthly_reports_dir(target_date)
         report_file = monthly_reports_dir / f"{target_date}.md"
 
@@ -133,6 +144,9 @@ def generate_daily_report(target_date: str) -> None:
             f.write(report_content)
 
         print(f"Daily report generated: {report_file}")
+    except Exception as e:
+        print(f"Error: Failed to write report file: {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
