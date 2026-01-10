@@ -19,18 +19,15 @@ log_message() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "${LOG_FILE}"
 }
 
-# Check if another instance is running
-if [ -f "${LOCK_FILE}" ]; then
+# Check if another instance is running (atomic operation)
+if ! mkdir "${LOCK_FILE}" 2>/dev/null; then
     log_message "Another instance is already running. Exiting."
     exit 0
 fi
 
-# Create lock file
-touch "${LOCK_FILE}"
-
-# Ensure lock file is removed on exit
+# Ensure lock directory is removed on exit
 cleanup() {
-    rm -f "${LOCK_FILE}"
+    rmdir "${LOCK_FILE}" 2>/dev/null
 }
 trap cleanup EXIT
 

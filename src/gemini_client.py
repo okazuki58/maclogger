@@ -47,8 +47,9 @@ def check_network_connection() -> bool:
             "https://generativelanguage.googleapis.com",
             timeout=5
         )
+        response.raise_for_status()
         return True
-    except Exception as e:
+    except requests.RequestException as e:
         print(f"Network connection check failed: {e}")
         return False
 
