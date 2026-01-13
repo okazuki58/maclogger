@@ -43,11 +43,10 @@ def check_network_connection() -> bool:
     出力: 接続可能な場合True、接続不可の場合False
     """
     try:
-        response = requests.get(
+        requests.get(
             "https://generativelanguage.googleapis.com",
             timeout=5
         )
-        response.raise_for_status()
         return True
     except requests.RequestException as e:
         print(f"Network connection check failed: {e}")
