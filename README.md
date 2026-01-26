@@ -72,6 +72,19 @@ make install-scheduler
 make uninstall-scheduler
 ```
 
+## 目標管理との連携（evaluation-system）
+
+macloggerの週報と評価シートの目標を突合し、計画vs実績を可視化する機能。
+
+```
+evaluation-system/
+├── evaluation/      # 評価シート（xlsx/csv）
+├── weekly-plans/    # 週次目標ファイル（YYYY-WXX-plan.md）
+└── reconcile/       # 突合結果（YYYY-WXX-reconcile.md）
+```
+
+Claude Code の `/weekly-breakdown` `/weekly-reconcile` スキルと連携して使用。
+
 ## 技術的な詳細（興味がある人向け）
 
 <details>
@@ -83,6 +96,7 @@ make uninstall-scheduler
 - `logs/hourly_summary_YYYY-MM-DD.jsonl`: 1時間ごとの要約
 - `reports/daily/YYYY-MM-DD.md`: 日報
 - `reports/weekly/YYYY-WNN.md`: 週報
+- `evaluation-system/`: 目標管理・突合システム
 
 ### 動作の仕組み
 
