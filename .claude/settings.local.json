@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(head:*)",
+      "Bash(tree:*)",
+      "Bash(claude auth status:*)",
+      "Bash(gh issue view:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(npx prisma migrate:*)",
+      "mcp__figma__get_metadata",
+      "mcp__figma__get_design_context",
+      "Bash(gh extension:*)",
+      "Bash(gh issue edit 74 --body \"$\\(cat <<''EOF''\n## 背景・目的\n\n親Issue #6 の一部として、項目追加UIをFigmaデザインに準拠した形式に変更する。\n\n## このタスクの範囲\n\n各項目行にホバー時に「+」ボタンを表示し、その位置への項目挿入を可能にする。また、テーブル下部に「項目を追加」行を追加する。\n\n## 要件\n\n### 1. 行内の+ボタン（ホバー時表示）\n- **表示条件: 行にホバーした時のみ表示**\n- 位置: 各項目行の左側（ドラッグハンドル横）\n- ボタンスタイル: `bg-[#F3F4F6] rounded-[8px] size-[24px]`\n- アイコン: plus \\(16px\\)\n- クリック時: その項目の上または下に新規項目を挿入\n- 非ホバー時: 非表示（スペースは確保）\n\n### 2. テーブル下部の「項目を追加」行\n- 背景: `bg-white`\n- 上部ボーダー: `border-t border-[#D1D5DB]`\n- テキスト: 「項目を追加」 `text-[14px] text-[#9CA3AF]`\n- +アイコン: 左側に配置\n- **この行は常に表示**\n\n### 3. 既存のボタン変更\n- 現在の「新規項目を追加」ボタン（テーブル下部）をFigmaデザインに合わせて変更\n\n### 4. インタラクション詳細\n- ホバー状態の管理: CSS `:hover` または React state で管理\n- トランジション: スムーズなフェードイン/アウト推奨\n\n## 完了条件（DoD）\n\n- [ ] 行ホバー時に+ボタンが表示される\n- [ ] 非ホバー時は+ボタンが非表示になる\n- [ ] +ボタンクリックで項目追加モーダルが開く\n- [ ] テーブル下部の「項目を追加」行が常に表示される\n- [ ] 既存の項目追加機能が正常に動作する\n\n## 制約・注意事項\n\n- 既存の `onRequestInsert` ハンドラを活用\n- AddItemModal との連携を維持\n- タッチデバイスでの代替UI検討（ホバーが使えない場合）\nEOF\n\\)\")",
+      "Bash(git checkout:*)",
+      "mcp__figma__get_screenshot",
+      "Bash(npm run check:*)",
+      "Bash(npm run test:e2e:*)",
+      "Bash(python3:*)",
+      "Bash(pip3 install:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run type-check:*)",
+      "Bash(gh api:*)",
+      "Bash(grep:*)",
+      "Bash(npx tsc:*)",
+      "Bash(xargs:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(npx shadcn@latest add skeleton:*)",
+      "Skill(git-worktree-runner)",
+      "Bash(git gtr:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gtr new:*)"
+    ]
+  }
+}

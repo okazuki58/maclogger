@@ -6,6 +6,7 @@ Gemini APIクライアントの生成と共通設定を提供します。
 """
 
 import os
+import requests
 from dotenv import load_dotenv
 from google import genai
 
@@ -33,6 +34,23 @@ def create_gemini_client() -> genai.Client | None:
     except Exception as e:
         print(f"Failed to create Gemini client: {e}")
         return None
+
+
+def check_network_connection() -> bool:
+    """
+    Gemini APIへの接続確認
+
+    出力: 接続可能な場合True、接続不可の場合False
+    """
+    try:
+        requests.get(
+            "https://generativelanguage.googleapis.com",
+            timeout=5
+        )
+        return True
+    except requests.RequestException as e:
+        print(f"Network connection check failed: {e}")
+        return False
 
 
 def generate_content(client: genai.Client, prompt: str) -> str | None:
