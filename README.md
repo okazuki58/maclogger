@@ -80,10 +80,11 @@ macloggerの週報と評価シートの目標を突合し、計画vs実績を可
 evaluation-system/
 ├── evaluation/      # 評価シート（xlsx/csv）
 ├── weekly-plans/    # 週次目標ファイル（YYYY-WXX-plan.md）
+├── daily-plans/     # 日次計画ファイル（YYYY-MM-DD.md）
 └── reconcile/       # 突合結果（YYYY-WXX-reconcile.md）
 ```
 
-Claude Code の `/weekly-breakdown` `/weekly-reconcile` スキルと連携して使用。
+Claude Code の `/weekly-breakdown` `/daily-breakdown` `/weekly-reconcile` スキルと連携して使用。
 
 ## 技術的な詳細（興味がある人向け）
 

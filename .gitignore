@@ -7,8 +7,10 @@ __pycache__/
 .env
 
 # Logs
-logs/
-reports/
+logs/*
+reports/*
+!logs/.gitkeep
+!reports/.gitkeep
 
 # macOS
 .DS_Store
@@ -19,4 +21,11 @@ reports/
 
 # Claude Code
 .claude/settings.local.json
+
+# Evaluation system (personal data)
+evaluation-system/daily-plans/*
+evaluation-system/weekly-plans/*
+evaluation-system/evaluation/*
+evaluation-system/reconcile/*
+!evaluation-system/*/.gitkeep
 
