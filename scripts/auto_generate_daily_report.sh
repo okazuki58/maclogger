@@ -49,7 +49,7 @@ for attempt in $(seq 1 ${MAX_RETRIES}); do
     EXIT_CODE=$?
     
     # Check result
-    if [ ${EXIT_CODE} -eq 0 ]; then
+    if [ "${EXIT_CODE}" -eq 0 ]; then
         log_message "Daily report generated successfully for ${YESTERDAY} on attempt ${attempt}"
         osascript -e "display notification \"Daily report generated for ${YESTERDAY}\" with title \"MacLogger\" sound name \"Glass\"" 2>/dev/null
         log_message "Finished auto daily report generation"
@@ -59,7 +59,7 @@ for attempt in $(seq 1 ${MAX_RETRIES}); do
         log_message "Failed to generate daily report for ${YESTERDAY} (exit code: ${EXIT_CODE})"
         
         # If not the last attempt, wait before retrying
-        if [ ${attempt} -lt ${MAX_RETRIES} ]; then
+        if [ "${attempt}" -lt "${MAX_RETRIES}" ]; then
             log_message "Retrying in ${RETRY_INTERVAL} seconds..."
             sleep ${RETRY_INTERVAL}
         fi
